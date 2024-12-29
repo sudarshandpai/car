@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Robot Control Panel</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .control-panel {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            max-width: 300px;
+            margin: 20px auto;
+        }
+
+        button {
+            padding: 15px;
+            font-size: 16px;
+            cursor: pointer;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 5px;
+        }
+
+        button:hover {
+            background-color: #45a049;
+        }
+
+        button:active {
+            background-color: #357a38;
+        }
+
+        .stop-btn {
+            background-color: #f44336;
+            grid-column: 2;
+        }
+
+        .stop-btn:hover {
+            background-color: #da190b;
+        }
+
+        .notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 15px 25px;
+            background-color: #f44336;
+            color: white;
+            border-radius: 5px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+            display: none;
+            z-index: 1000;
+            font-weight: bold;
+            font-size: 16px;
+            animation: slideIn 0.5s ease-out;
+        }
+
+        @keyframes slideIn {
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+
+        th,
+        td {
+            border: 1px solid #ddd;
+            padding: 12px;
+            text-align: left;
+        }
+
+        th {
+            background-color: #4CAF50;
+            color: white;
+        }
+
+        tr:nth-child(even) {
+            background-color: #f2f2f2;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>Robot Control Panel</h1>
+
+    <div id="notification" class="notification"></div>
+
+    <div class="control-panel">
+        <div></div>
+        <button onclick="move('front')">Forward</button>
+        <div></div>
+        <button onclick="move('left')">Left</button>
+        <button class="stop-btn" onclick="move('stop')">Stop</button>
+        <button onclick="move('right')">Right</button>
+        <div></div>
+        <button onclick="move('back')">Backward</button>
+        <div></div>
+    </div>
+
+    <h2>Sensor Data</h2>
+    <table>
+        <thead>
+            <tr>
+                <th>Sensor</th>
+                <th>Value</th>
+                <th>Unit</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>Temperature</td>
+                <td id="temperature">-</td>
+                <td>°C</td>
+            </tr>
+            <tr>
+                <td>Humidity</td>
+                <td id="humidity">-</td>
+                <td>%</td>
+            </tr>
+            <tr>
+                <td>Air Quality (MQ)</td>
+                <td id="mqValue">-</td>
+                <td>PPM</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <script>
+        function showNotification(message) {
+            const notification = document.getElementById('notification');
+            notification.textContent = message;
+            notification.style.display = 'block';
+            setTimeout(() => {
+                notification.style.display = 'none';
+            }, 2000);  // Show notification for 2 seconds
+        }
+
+        function move(direction) {
+            fetch(`/move/${direction}`)
+                .then(response => response.json())
+                .then(data => {
+                    // Show notification only for stop button or obstacle detection
+                    if (direction === 'stop') {
+                        showNotification('Car stopped manually!');
+                    } else if (data.status.includes('Obstacle detected')) {
+                        showNotification('Car stopped - Obstacle detected!');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                });
+        }
+
+        function updateSensorData() {
+            fetch('/sensors')
+                .then(response => response.json())
+                .then(data => {
+                    document.getElementById('temperature').textContent =
+                        data.temperature === 'Error' ? 'Error' : data.temperature;
+                    document.getElementById('humidity').textContent =
+                        data.humidity === 'Error' ? 'Error' : data.humidity;
+                    document.getElementById('mqValue').textContent =
+                        data.mqValue === 'Error' ? 'Error' : data.mqValue;
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    document.getElementById('temperature').textContent = 'Error';
+                    document.getElementById('humidity').textContent = 'Error';
+                    document.getElementById('mqValue').textContent = 'Error';
+                });
+        }
+
+        // Update sensor data every 2 seconds
+        setInterval(updateSensorData, 2000);
+        // Initial update
+        updateSensorData();
+    </script>
+</body>
+
+</html>
